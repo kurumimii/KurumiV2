@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kurumi Script Hub</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #0b0b18 0%, #0d0d20 40%, #090912 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #fff;
+    overflow-x: hidden;
+  }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #0a0a0f; }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+  /* ── AMBIENT GLOWS ── */
+  .glow-top {
+    position: fixed; top: -120px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 300px; border-radius: 50%;
+    pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse, rgba(120,80,255,0.13) 0%, transparent 70%);
+  }
+  .glow-bl {
+    position: fixed; bottom: 0; left: 0;
+    width: 300px; height: 300px; border-radius: 50%;
+    pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse, rgba(232,149,42,0.07) 0%, transparent 70%);
+  }
+  .glow-br {
+    position: fixed; bottom: 0; right: 0;
+    width: 300px; height: 300px; border-radius: 50%;
+    pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse, rgba(155,108,250,0.07) 0%, transparent 70%);
+  }
+  canvas#stars { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+  /* ── HEADER ── */
+  header { position: relative; z-index: 10; padding: 24px 16px 8px; }
+  .header-row {
+    max-width: 480px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .pill-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-radius: 999px;
+    background: rgba(120,80,255,0.12);
+    border: 1px solid rgba(120,80,255,0.4);
+    backdrop-filter: blur(10px);
+  }
+  .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: #a78bfa; animation: pulse 2s infinite; }
+  .pill-text { font-size: 11px; font-weight: 800; letter-spacing: 0.2em; color: #c4b5fd; text-transform: uppercase; }
+  /* ── HERO ── */
+  .hero { max-width: 480px; margin: 0 auto; text-align: center; padding: 0 16px 28px; }
+  .hero h1 { font-size: 38px; font-weight: 900; line-height: 1.15; margin-bottom: 12px; letter-spacing: -0.5px; }
+  .hero h1 .white { color: #fff; text-shadow: 0 2px 20px rgba(255,255,255,0.1); }
+  .hero h1 .purple {
+    background: linear-gradient(90deg, #a78bfa 0%, #c084fc 50%, #e879f9 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero p { font-size: 14px; color: #9ca3af; line-height: 1.7; max-width: 300px; margin: 0 auto; }
+  /* ── GRID ── */
+  .grid {
+    position: relative; z-index: 10;
+    max-width: 480px; margin: 0 auto;
+    padding: 0 12px 40px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+  /* ── CARD ── */
+  .card {
+    background: linear-gradient(160deg, #161628 0%, #111120 100%);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 18px; overflow: hidden;
+    display: flex; flex-direction: column;
+    cursor: pointer;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    opacity: 0; transform: translateY(40px) scale(0.95);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s ease;
+  }
+  .card.visible { opacity: 1; transform: translateY(0) scale(1); }
+  .card:hover { transform: translateY(-3px) scale(1.02) !important; }
+  .card:active { transform: scale(0.97) !important; }
+  .card-img-wrap { position: relative; width: 100%; height: 110px; overflow: hidden; }
+  .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease; }
+  .card:hover .card-img-wrap img { transform: scale(1.08); }
+  .card-img-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(17,17,32,0.7) 100%);
+  }
+  .card-cat {
+    position: absolute; bottom: 8px; left: 8px;
+    padding: 2px 8px; border-radius: 6px;
+    font-size: 9px; font-weight: 900; letter-spacing: 0.15em; text-transform: uppercase;
+    backdrop-filter: blur(6px);
+  }
+  .card-body { padding: 10px 10px 12px; display: flex; flex-direction: column; flex: 1; gap: 8px; }
+  .card-name { font-size: 12.5px; font-weight: 900; color: #fff; line-height: 1.3; }
+  .card-desc { font-size: 10px; color: #9ca3af; line-height: 1.5; margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-btn {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px; border-radius: 12px; border: none; cursor: pointer;
+    font-size: 11px; font-weight: 900; letter-spacing: 0.05em; color: #fff;
+    margin-top: auto; transition: transform 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .card-btn::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.18) 50%, transparent 60%);
+    animation: shimmer 2.5s infinite;
+  }
+  .card-btn:hover { transform: scale(1.03); }
+  .card-btn:active { transform: scale(0.96); }
+  .card-ripple {
+    position: absolute; border-radius: 50%; pointer-events: none;
+    animation: rippleAnim 0.6s ease-out forwards;
+    transform: scale(0); opacity: 0.6;
+  }
+  /* ── SCRIPT MODAL ── */
+  .overlay {
+    position: fixed; inset: 0; z-index: 50;
+    display: flex; align-items: flex-end; justify-content: center;
+    pointer-events: none; opacity: 0; transition: opacity 0.3s;
+  }
+  .overlay.open { pointer-events: all; opacity: 1; }
+  .overlay-bg { position: absolute; inset: 0; background: rgba(0,0,0,0.82); backdrop-filter: blur(8px); }
+  .modal {
+    position: relative; width: 100%; max-width: 480px;
+    background: linear-gradient(180deg, #18182e 0%, #111120 100%);
+    border-radius: 24px 24px 0 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 -8px 60px rgba(0,0,0,0.5);
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.34,1.2,0.64,1);
+    overflow: hidden;
+  }
+  .overlay.open .modal { transform: translateY(0); }
+  .drag-pill { display: flex; justify-content: center; padding: 12px 0 4px; }
+  .drag-pill span { width: 40px; height: 4px; border-radius: 99px; background: rgba(255,255,255,0.2); display: block; }
+  .modal-img-wrap { margin: 0 16px; border-radius: 16px; overflow: hidden; height: 170px; position: relative; }
+  .modal-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+  .modal-img-fade { position: absolute; inset: 0; background: linear-gradient(to top, #111120 0%, transparent 60%); }
+  .modal-content { padding: 12px 20px 28px; }
+  .modal-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .modal-title { font-size: 20px; font-weight: 900; color: #fff; }
+  .close-btn {
+    width: 32px; height: 32px; border-radius: 10px;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: #9ca3af; transition: background 0.2s, transform 0.2s;
+  }
+  .close-btn:hover { background: rgba(255,255,255,0.14); }
+  .close-btn:active { transform: scale(0.9); }
+  .modal-cat { display: inline-block; margin-bottom: 16px; padding: 2px 10px; border-radius: 6px; font-size: 10px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase; }
+  .script-label { font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 8px; }
+  .script-box {
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px; padding: 14px; margin-bottom: 14px; position: relative; overflow: hidden;
+  }
+  .script-box::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  }
+  .script-box pre { font-family: 'Courier New', monospace; font-size: 11.5px; color: #a0aec0; line-height: 1.6; white-space: pre-wrap; word-break: break-all; margin: 0; }
+  .copy-btn {
+    width: 100%; padding: 14px; border-radius: 18px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 900; letter-spacing: 0.05em; color: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .copy-btn::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.18) 50%, transparent 60%);
+    animation: shimmer 2.5s infinite;
+  }
+  .copy-btn:hover { transform: scale(1.02); }
+  .copy-btn:active { transform: scale(0.97); }
+  .modal-warn { text-align: center; font-size: 10px; color: rgba(255,255,255,0.2); margin-top: 10px; }
+  /* ── FOOTER ── */
+  footer { position: relative; z-index: 10; text-align: center; padding: 16px; font-size: 10px; color: #374151; letter-spacing: 0.05em; }
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+    z-index: 999; background: #1e1e2e; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px; padding: 10px 20px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; font-weight: 700; color: #fff;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    transition: transform 0.4s cubic-bezier(0.34,1.4,0.64,1), opacity 0.3s;
+    opacity: 0; pointer-events: none;
+    white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast .toast-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; animation: pulse 1.5s infinite; }
+  /* ── KEYFRAMES ── */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
+  @keyframes rippleAnim { 0%{transform:scale(0);opacity:0.6} 100%{transform:scale(4);opacity:0} }
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="glow-top"></div>
+<div class="glow-bl"></div>
+<div class="glow-br"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-row">
+    <div class="pill-badge">
+      <span class="pill-dot"></span>
+      <span class="pill-text">Roblox Script Hub</span>
+    </div>
+  </div>
+  <div class="hero">
+    <h1><span class="white">Kurumi </span><span class="purple">Script Hub</span></h1>
+    <p>Select a game to get the script — copy with one click, paste into your executor.</p>
+  </div>
+</header>
+
+<!-- CARDS GRID -->
+<div class="grid" id="cardsGrid"></div>
+
+<!-- FOOTER -->
+<footer>© 2025 Kurumi Script Hub • For educational purposes only</footer>
+
+<!-- SCRIPT MODAL -->
+<div class="overlay" id="scriptOverlay" onclick="handleOverlayClick(event)">
+  <div class="overlay-bg"></div>
+  <div class="modal" id="scriptModal">
+    <div class="drag-pill"><span></span></div>
+    <div class="modal-img-wrap">
+      <img id="modalImg" src="" alt="" onerror="this.src='https://images.pexels.com/photos/33930731/pexels-photo-33930731.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=300&w=400'" />
+      <div class="modal-img-fade"></div>
+    </div>
+    <div class="modal-content">
+      <div class="modal-title-row">
+        <span class="modal-title" id="modalTitle"></span>
+        <button class="close-btn" onclick="closeModal()">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <span class="modal-cat" id="modalCat"></span>
+      <div class="script-label">Script — Copy &amp; Paste into your Executor</div>
+      <div class="script-box"><pre id="modalScript"></pre></div>
+      <button class="copy-btn" id="copyBtn" onclick="copyScript()">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+        </svg>
+        Copy Script
+      </button>
+      <div class="modal-warn">⚠️ Use responsibly. Educational purposes only.</div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"><span class="toast-dot"></span><span id="toastMsg">Webhook sent!</span></div>
+
+<script>
+// ─── WEBHOOK CONFIG ───────────────────────────────────────────────────────────
+const WEBHOOK_URL = "https://discord.com/api/webhooks/1524631932502151228/YzszJH77g3hCei1YZ_MGEF2PmTcefRso7nmLep61mLqw7kKgdQpgxGdg8DrO3Zcr3FQc";
+
+// ─── GAME DATA ────────────────────────────────────────────────────────────────
+const FALLBACK = "https://images.pexels.com/photos/33930731/pexels-photo-33930731.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=300&w=400";
+const games = [
+  {
+    id: 1,
+    name: "Blox Fruits",
+    emoji: "🍎",
+    cat: "ADVENTURE",
+    catColor: "#c8a227",
+    catBg: "rgba(200,162,39,0.18)",
+    btn: "#e8952a",
+    glow: "rgba(232,149,42,0.45)",
+    desc: "Auto farm, auto quest, fruit sniper, fruit spawner, and powerful combat features for all seas.",
+    script: `loadstring(game:HttpGet("https://raw.githubusercontent.com/kurumimii/Blox-Fruit/refs/heads/main/extreme"))()`,
+    image: "https://tr.rbxcdn.com/180DAY-14dc1d72bd47522ee8f9d42ab0fef712/768/432/Image/Webp/noFilter",
+    embedColor: 0xE8952A
+  },
+  {
+    id: 2,
+    name: "Grow A Garden 2",
+    emoji: "🌱",
+    cat: "SIMULATOR",
+    catColor: "#21c99e",
+    catBg: "rgba(33,201,158,0.18)",
+    btn: "#21c99e",
+    glow: "rgba(33,201,158,0.45)",
+    desc: "Auto farm, auto collect, speed hack, spawner, and many other powerful features.",
+    script: `loadstring(game:HttpGet("https://raw.githubusercontent.com/kurumimii/GAG-2/refs/heads/main/Premium-load"))()`,
+    image: "https://tr.rbxcdn.com/180DAY-4d023b36ace24ced73efbaadcb66b37c/768/432/Image/Webp/noFilter",
+    embedColor: 0x21C99E
+  },
+  {
+    id: 3,
+    name: "Murder Mystery 2",
+    emoji: "🔪",
+    cat: "MYSTERY",
+    catColor: "#9b6cfa",
+    catBg: "rgba(155,108,250,0.18)",
+    btn: "#9b6cfa",
+    glow: "rgba(155,108,250,0.45)",
+    desc: "ESP, aimbot, godmode, knife and gun spawner, and useful cheats for both Murderer and Sheriff roles.",
+    script: `loadstring(game:HttpGet("https://raw.githubusercontent.com/kurumimii/KurumiTops/refs/heads/main/MM2"))()`,
+    image: "https://tr.rbxcdn.com/180DAY-fe7335c3ad752e84323cd81ae38de69a/768/432/Image/Webp/noFilter",
+    embedColor: 0x9B6CFA
+  },
+  {
+    id: 4,
+    name: "Steal A Brainrot",
+    emoji: "🧠",
+    cat: "TYCOON",
+    catColor: "#e8415a",
+    catBg: "rgba(232,65,90,0.18)",
+    btn: "#e8415a",
+    glow: "rgba(232,65,90,0.45)",
+    desc: "Auto trade, auto steal, dupe items and a strongest real spawner.",
+    script: `loadstring(game:HttpGet("https://raw.githubusercontent.com/kurumimii/FURINA-HUB-GENERATION/refs/heads/main/FurinaTOp"))()
+`,
+    image: "https://tr.rbxcdn.com/180DAY-e9f65602f6682ba50ca16b282e6d6e95/768/432/Image/Webp/noFilter",
+    embedColor: 0xE8415A
+  },
+  {
+    id: 5,
+    name: "Adopt Me",
+    emoji: "🐾",
+    cat: "SIMULATOR",
+    catColor: "#21c99e",
+    catBg: "rgba(33,201,158,0.18)",
+    btn: "#21c99e",
+    glow: "rgba(33,201,158,0.45)",
+    desc: "Auto hatch, auto farm, dupe pets, spawner, and unlock all secret areas instantly.",
+    script: `loadstring(game:HttpGet("https://raw.githubusercontent.com/kurumimii/Adm-script/refs/heads/main/adm"))()`,
+    image: "https://tr.rbxcdn.com/180DAY-405b7968b4449da3a0e5f54ed0ef1456/768/432/Image/Webp/noFilter",
+    embedColor: 0x21C99E
+  },
+  {
+    id: 6,
+    name: "COMING MORE SOON",
+    emoji: "🏙️",
+    cat: "ON GOING",
+    catColor: "#3b9eff",
+    catBg: "rgba(59,158,255,0.18)",
+    btn: "#3b9eff",
+    glow: "rgba(59,158,255,0.45)",
+    desc: "Join on Me!",
+    script: `Join on Me!`,
+    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQokGIUHTdXlH7G3nAou25ey1RXPQjTzCLZuUPakhLYHQ&s=10",
+    embedColor: 0x3B9EFF
+  }
+];
+
+// ─── TRACKING STATE ───────────────────────────────────────────────────────────
+let currentGame = null;
+let sessionCopyCount = 0;
+let gameCopyCounts = {};
+let sessionStartTime = Date.now();
+let pageVisitTime = new Date().toISOString();
+
+// ─── DEVICE / BROWSER DETECTION ──────────────────────────────────────────────
+function getDeviceInfo() {
+  const ua = navigator.userAgent;
+  let os = "Unknown OS";
+  let browser = "Unknown Browser";
+  let device = "Desktop 🖥️";
+  let deviceType = "desktop";
+
+  // OS detection
+  if (/Windows NT 10/.test(ua)) os = "Windows 10/11";
+  else if (/Windows NT 6\.3/.test(ua)) os = "Windows 8.1";
+  else if (/Windows NT 6\.1/.test(ua)) os = "Windows 7";
+  else if (/Windows/.test(ua)) os = "Windows";
+  else if (/Android/.test(ua)) { os = "Android " + (ua.match(/Android ([\d.]+)/)?.[1] || ""); device = "Android Phone 📱"; deviceType = "mobile"; }
+  else if (/iPhone/.test(ua)) { os = "iOS " + (ua.match(/OS ([\d_]+)/)?.[1]?.replace(/_/g,'.') || ""); device = "iPhone 📱"; deviceType = "mobile"; }
+  else if (/iPad/.test(ua)) { os = "iPadOS " + (ua.match(/OS ([\d_]+)/)?.[1]?.replace(/_/g,'.') || ""); device = "iPad 📱"; deviceType = "tablet"; }
+  else if (/Mac OS X/.test(ua)) os = "macOS " + (ua.match(/Mac OS X ([\d_]+)/)?.[1]?.replace(/_/g,'.') || "");
+  else if (/Linux/.test(ua)) os = "Linux";
+
+  // Browser detection
+  if (/Edg\//.test(ua)) browser = "Microsoft Edge 🌐";
+  else if (/OPR\/|Opera/.test(ua)) browser = "Opera 🔴";
+  else if (/YaBrowser/.test(ua)) browser = "Yandex Browser";
+  else if (/SamsungBrowser/.test(ua)) browser = "Samsung Browser";
+  else if (/Firefox\//.test(ua)) browser = "Firefox 🦊";
+  else if (/Chrome\//.test(ua)) browser = "Chrome 🌐";
+  else if (/Safari\//.test(ua)) browser = "Safari 🧭";
+
+  // Screen info
+  const screen_res = window.screen.width + "x" + window.screen.height;
+  const viewport = window.innerWidth + "x" + window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+
+  // Language & timezone
+  const lang = navigator.language || "Unknown";
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown";
+
+  // Online status
+  const online = navigator.onLine ? "Online 🟢" : "Offline 🔴";
+
+  // Platform
+  const platform = navigator.platform || "Unknown";
+
+  // Touch support
+  const touch = ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? "Yes 👆" : "No 🖱️";
+
+  // Color scheme
+  const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches ? "Dark 🌙" : "Light ☀️";
+
+  // Cookie enabled
+  const cookies = navigator.cookieEnabled ? "Enabled ✅" : "Disabled ❌";
+
+  // CPU cores
+  const cores = navigator.hardwareConcurrency || "Unknown";
+
+  // Memory (Chrome/Edge only) - FIXED LINE
+  const memory = navigator.deviceMemory ? navigator.deviceMemory + " GB" : "Unknown";
+
+  return { os, browser, device, deviceType, screen_res, viewport, dpr, lang, tz, online, platform, touch, darkMode, cookies, cores, memory };
+}
+
+function getTimeInfo() {
+  const now = new Date();
+  const sessionSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
+  const sessionMin = Math.floor(sessionSeconds / 60);
+  const sessionSec = sessionSeconds % 60;
+  const sessionStr = sessionMin > 0 ? sessionMin + "m " + sessionSec + "s" : sessionSec + "s";
+  const localTime = now.toLocaleString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const utcTime = now.toUTCString();
+  return { sessionStr, localTime, utcTime, iso: now.toISOString() };
+}
+
+// ─── WEBHOOK SENDER ───────────────────────────────────────────────────────────
+async function sendWebhook(game) {
+  const info = getDeviceInfo();
+  const time = getTimeInfo();
+  sessionCopyCount++;
+  gameCopyCounts[game.name] = (gameCopyCounts[game.name] || 0) + 1;
+
+  // Get IP info with better error handling
+  let ipData = { 
+    ip: "Unknown", 
+    country: "Unknown", 
+    region: "Unknown", 
+    city: "Unknown", 
+    org: "Unknown", 
+    loc: "Unknown",
+    country_name: "Unknown",
+    country_code: "Unknown"
+  };
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const r = await fetch("https://ipapi.co/json/", { 
+      signal: controller.signal 
+    });
+    clearTimeout(timeoutId);
+    if (r.ok) {
+      ipData = await r.json();
+    }
+  } catch (err) {
+    console.warn("IP fetch failed:", err);
+  }
+
+  const flag = ipData.country_code && ipData.country_code !== "Unknown" 
+    ? ":flag_" + ipData.country_code.toLowerCase() + ":" 
+    : "🌍";
+  const mapUrl = ipData.loc && ipData.loc !== "Unknown" 
+    ? "https://www.google.com/maps?q=" + ipData.loc 
+    : null;
+
+  // Build copy stats
+  const gameStatsLines = Object.entries(gameCopyCounts)
+    .map(function(entry) { return "> **" + entry[0] + "** — " + entry[1] + "x"; })
+    .join("\n");
+
+  const payload = {
+    username: "Kurumi Notifier",
+    avatar_url: "https://i.imgur.com/4M34hi2.png",
+    embeds: [
+      {
+        color: 0xED4245,
+        author: {
+          name: "🔔 Script Copied — Kurumi Script Hub",
+          icon_url: "https://i.imgur.com/4M34hi2.png"
+        },
+        title: game.emoji + "  " + game.name + "  ·  " + game.cat,
+        description: "> A user just copied the **" + game.name + "** script from Kurumi Script Hub.\n> **Script preview:**\n> ```lua\n> " + game.script.slice(0, 80) + "...\n> ```",
+        fields: [
+          {
+            name: "🎮  Game Information",
+            value: [
+              "> **Game:** " + game.emoji + " " + game.name,
+              "> **Category:** " + game.cat,
+              "> **Description:** " + game.desc,
+              "> **Script File:** `" + (game.script.match(/main\/(\w+)/)?.[1] || "Unknown") + "`"
+            ].join("\n"),
+            inline: false
+          },
+          {
+            name: flag + "  Location & Network",
+            value: [
+              "> **IP Address:** `" + ipData.ip + "`",
+              "> **Country:** " + (ipData.country_name || ipData.country),
+              "> **Region:** " + ipData.region,
+              "> **City:** " + ipData.city,
+              "> **ISP / Org:** " + ipData.org,
+              mapUrl ? "> **Map:** [Open in Google Maps](" + mapUrl + ")" : "> **Coords:** Unknown"
+            ].join("\n"),
+            inline: false
+          },
+          {
+            name: "💻  Device & System",
+            value: [
+              "> **Device:** " + info.device,
+              "> **OS:** " + info.os,
+              "> **Platform:** " + info.platform,
+              "> **Browser:** " + info.browser,
+              "> **Screen:** " + info.screen_res + " (DPR: " + info.dpr + ")",
+              "> **Viewport:** " + info.viewport,
+              "> **Touch:** " + info.touch,
+              "> **CPU Cores:** " + info.cores,
+              "> **RAM:** " + info.memory
+            ].join("\n"),
+            inline: false
+          },
+          {
+            name: "🎨  User Preferences",
+            value: [
+              "> **Language:** " + info.lang,
+              "> **Timezone:** " + info.tz,
+              "> **Theme:** " + info.darkMode,
+              "> **Cookies:** " + info.cookies,
+              "> **Status:** " + info.online
+            ].join("\n"),
+            inline: true
+          },
+          {
+            name: "📊  Session Stats",
+            value: [
+              "> **Session Time:** " + time.sessionStr,
+              "> **Total Copies:** " + sessionCopyCount,
+              "> **This Game Copies:** " + gameCopyCounts[game.name],
+              "> **Page Load:** " + new Date(pageVisitTime).toLocaleTimeString()
+            ].join("\n"),
+            inline: true
+          },
+          {
+            name: "📋  All Game Copy Stats (This Session)",
+            value: gameStatsLines || "> No copies yet.",
+            inline: false
+          },
+          {
+            name: "🕐  Timestamps",
+            value: [
+              "> **Local Time:** " + time.localTime,
+              "> **UTC:** " + time.utcTime
+            ].join("\n"),
+            inline: false
+          },
+          {
+            name: "🌐  Page Info",
+            value: [
+              "> **URL:** `" + window.location.href + "`",
+              "> **Referrer:** `" + (document.referrer || "Direct") + "`",
+              "> **Title:** " + document.title
+            ].join("\n"),
+            inline: false
+          }
+        ],
+        thumbnail: { url: game.image },
+        footer: {
+          text: "Kurumi Notifier  •  Copy #" + sessionCopyCount + " this session  •  " + new Date().toLocaleString(),
+          icon_url: "https://i.imgur.com/4M34hi2.png"
+        },
+        timestamp: new Date().toISOString()
+      }
+    ]
+  };
+
+  try {
+    const response = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Webhook failed:", response.status, errorText);
+    } else {
+      console.log("✅ Webhook sent successfully!");
+    }
+  } catch (err) {
+    console.error("Webhook error:", err);
+  }
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  const toastMsg = document.getElementById('toastMsg');
+  toastMsg.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(function() { toast.classList.remove('show'); }, 3000);
+}
+
+// ─── STARFIELD ────────────────────────────────────────────────────────────────
+(function () {
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  const stars = Array.from({ length: 160 }, function() {
+    return {
+      x: Math.random() * innerWidth,
+      y: Math.random() * innerHeight,
+      r: Math.random() * 1.4 + 0.2,
+      a: Math.random(),
+      speed: Math.random() * 0.3 + 0.05,
+      tw: Math.random() * Math.PI * 2
+    };
+  });
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(function(s) {
+      s.tw += 0.018;
+      const alpha = (0.3 + 0.5 * Math.abs(Math.sin(s.tw))) * s.a;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255," + alpha + ")";
+      ctx.fill();
+      s.y -= s.speed * 0.15;
+      if (s.y < 0) { s.y = canvas.height; s.x = Math.random() * canvas.width; }
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─── BUILD CARDS ──────────────────────────────────────────────────────────────
+function buildCards() {
+  const grid = document.getElementById('cardsGrid');
+  games.forEach(function(g, i) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = g.id;
+    card.innerHTML = 
+      '<div class="card-img-wrap">' +
+        '<img src="' + g.image + '" alt="' + g.name + '" onerror="this.src=\'' + FALLBACK + '\'" />' +
+        '<div class="card-img-overlay"></div>' +
+        '<div class="card-cat" style="color:' + g.catColor + ';background:' + g.catBg + ';border:1px solid ' + g.catColor + '55;">' + g.cat + '</div>' +
+      '</div>' +
+      '<div class="card-body">' +
+        '<div>' +
+          '<div class="card-name">' + g.emoji + ' ' + g.name + '</div>' +
+          '<div class="card-desc">' + g.desc + '</div>' +
+        '</div>' +
+        '<button class="card-btn" style="background:linear-gradient(135deg,' + g.btn + 'cc,' + g.btn + ');box-shadow:0 4px 14px ' + g.glow + ';">' +
+          '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">' +
+            '<path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 3v13m0 0l-4-4m4 4l4-4"/>' +
+          '</svg>' +
+          'Get Script' +
+        '</button>' +
+      '</div>';
+    card.addEventListener('click', function(e) { openModal(g, e, card); });
+    card.addEventListener('mouseenter', function() { card.style.boxShadow = "0 8px 32px " + g.glow + ", 0 0 0 1px " + g.btn + "44"; });
+    card.addEventListener('mouseleave', function() { card.style.boxShadow = '0 4px 24px rgba(0,0,0,0.4)'; });
+    grid.appendChild(card);
+    setTimeout(function() { card.classList.add('visible'); }, 120 * i + 300);
+  });
+}
+buildCards();
+
+// ─── RIPPLE ───────────────────────────────────────────────────────────────────
+function spawnRipple(card, e) {
+  const rect = card.getBoundingClientRect();
+  const g = games.find(function(x) { return x.id == card.dataset.id; });
+  const r = document.createElement('span');
+  r.className = 'card-ripple';
+  r.style.cssText = "left:" + (e.clientX - rect.left - 30) + "px;top:" + (e.clientY - rect.top - 30) + "px;width:60px;height:60px;background:" + (g ? g.btn : '#fff') + "55;";
+  card.style.position = 'relative';
+  card.appendChild(r);
+  setTimeout(function() { r.remove(); }, 650);
+}
+
+// ─── MODAL OPEN / CLOSE ───────────────────────────────────────────────────────
+function openModal(game, e, card) {
+  currentGame = game;
+  spawnRipple(card, e);
+  document.getElementById('modalImg').src = game.image;
+  document.getElementById('modalTitle').textContent = game.emoji + ' ' + game.name;
+  document.getElementById('modalScript').textContent = game.script;
+  const catEl = document.getElementById('modalCat');
+  catEl.textContent = game.cat;
+  catEl.style.color = game.catColor;
+  catEl.style.background = game.catBg;
+  catEl.style.border = "1px solid " + game.catColor + "44";
+  const modal = document.getElementById('scriptModal');
+  modal.style.borderTop = "1px solid " + game.btn + "44";
+  modal.style.boxShadow = "0 -8px 60px " + game.glow;
+  resetCopyBtn(game);
+  document.getElementById('scriptOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('scriptOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function handleOverlayClick(e) {
+  const overlay = document.getElementById('scriptOverlay');
+  if (e.target === overlay || e.target.classList.contains('overlay-bg')) closeModal();
+}
+
+// ─── COPY SCRIPT ──────────────────────────────────────────────────────────────
+function copyScript() {
+  if (!currentGame) return;
+  const text = currentGame.script;
+  const game = currentGame;
+  
+  navigator.clipboard.writeText(text).catch(function() {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  });
+
+  // Visual feedback
+  const btn = document.getElementById('copyBtn');
+  btn.innerHTML = 
+    '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">' +
+      '<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>' +
+    '</svg>' +
+    'Copied!';
+  btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+  btn.style.boxShadow = '0 6px 24px rgba(34,197,94,0.45)';
+  setTimeout(function() { resetCopyBtn(game); }, 2500);
+
+  // Toast
+  showToast("✅ " + game.emoji + " " + game.name + " script copied!");
+
+  // Fire webhook
+  sendWebhook(game);
+}
+
+function resetCopyBtn(game) {
+  const btn = document.getElementById('copyBtn');
+  if (!btn || !game) return;
+  btn.innerHTML = 
+    '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' +
+      '<rect x="9" y="9" width="13" height="13" rx="2"/>' +
+      '<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>' +
+    '</svg>' +
+    'Copy Script';
+  btn.style.background = "linear-gradient(135deg, " + game.btn + "cc, " + game.btn + ")";
+  btn.style.boxShadow = "0 6px 24px " + game.glow;
+}
+
+// ─── ESC KEY ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeModal(); }
+});
+</script>
+</body>
+</html>
+
